@@ -1,24 +1,28 @@
 /**
  * Workflow Monitor Extension
  *
- * Observes tool_call and tool_result events to track TDD phase (RED→GREEN→REFACTOR).
- * Injects warnings on TDD violations. Shows phase in TUI widget.
- * Registers workflow_reference tool for on-demand reference content.
+ * Observes tool_call and tool_result events to:
+ * - Track TDD phase (RED→GREEN→REFACTOR) and inject warnings on violations
+ * - Track debug fix-fail cycles and inject warnings on investigation skips / thrashing
+ * - Show workflow state in TUI widget
+ * - Register workflow_reference tool for on-demand reference content
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { StringEnum } from "@mariozechner/pi-ai";
 import { Text } from "@mariozechner/pi-tui";
-import { createWorkflowHandler } from "./workflow-monitor/workflow-handler";
+import { createWorkflowHandler, type Violation } from "./workflow-monitor/workflow-handler";
 import { getTddViolationWarning } from "./workflow-monitor/warnings";
+import { getDebugViolationWarning, type DebugViolationType } from "./workflow-monitor/warnings";
 import { loadReference, REFERENCE_TOPICS } from "./workflow-monitor/reference-tool";
 
 export default function (pi: ExtensionAPI) {
   const handler = createWorkflowHandler();
 
-  // Track pending violation from tool_call to inject in tool_result
-  let pendingViolation: { type: string; file: string } | null = null;
+  // Pending violation: set during tool_call, injected during tool_result.
+  // Scoped here because tool_call and tool_result fire sequentially per call.
+  let pendingViolation: Violation | null = null;
 
   // --- State reconstruction on session events ---
   for (const event of [
@@ -39,13 +43,19 @@ export default function (pi: ExtensionAPI) {
     pendingViolation = result.violation;
   });
 
-  // --- Tool result modification (inject warnings) ---
+  // --- Tool result modification (inject warnings + track investigation) ---
   pi.on("tool_result", async (event, ctx) => {
-    // Inject TDD violation warning
+    // Handle read tool as investigation signal
+    if (event.toolName === "read") {
+      const path = (event.input as Record<string, any>).path as string ?? "";
+      handler.handleReadOrInvestigation("read", path);
+    }
+
+    // Inject violation warning on write/edit
     if ((event.toolName === "write" || event.toolName === "edit") && pendingViolation) {
       const violation = pendingViolation;
       pendingViolation = null;
-      const warning = getTddViolationWarning(violation.type, violation.file);
+      const warning = formatViolationWarning(violation);
       const existingText = event.content
         .filter((c): c is { type: "text"; text: string } => c.type === "text")
         .map((c) => c.text)
@@ -57,7 +67,7 @@ export default function (pi: ExtensionAPI) {
     }
     pendingViolation = null;
 
-    // Handle bash results (test runs, commits)
+    // Handle bash results (test runs, commits, investigation)
     if (event.toolName === "bash") {
       const command = (event.input as Record<string, any>).command as string ?? "";
       const output = event.content
@@ -72,6 +82,18 @@ export default function (pi: ExtensionAPI) {
     return undefined;
   });
 
+  // --- Format violation warning based on type ---
+  function formatViolationWarning(violation: Violation): string {
+    if (violation.type === "source-before-test" || violation.type === "source-during-red") {
+      return getTddViolationWarning(violation.type, violation.file);
+    }
+    return getDebugViolationWarning(
+      violation.type as DebugViolationType,
+      violation.file,
+      "fixAttempts" in violation ? violation.fixAttempts : 0
+    );
+  }
+
   // --- TUI Widget ---
   function updateWidget(ctx: ExtensionContext) {
     if (!ctx.hasUI) return;
@@ -80,14 +102,34 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.setWidget("workflow_monitor", undefined);
     } else {
       ctx.ui.setWidget("workflow_monitor", (_tui, theme) => {
-        const phase = handler.getTddPhase().toUpperCase();
-        const colorMap: Record<string, string> = {
-          RED: "error",
-          GREEN: "success",
-          REFACTOR: "accent",
-        };
-        const color = colorMap[phase] ?? "muted";
-        return new Text(theme.fg(color, `TDD: ${phase}`), 0, 0);
+        const parts: string[] = [];
+
+        // TDD phase
+        const tddPhase = handler.getTddPhase().toUpperCase();
+        if (tddPhase !== "IDLE") {
+          const colorMap: Record<string, string> = {
+            RED: "error",
+            GREEN: "success",
+            REFACTOR: "accent",
+          };
+          parts.push(theme.fg(colorMap[tddPhase] ?? "muted", `TDD: ${tddPhase}`));
+        }
+
+        // Debug state
+        if (handler.isDebugActive()) {
+          const attempts = handler.getDebugFixAttempts();
+          if (attempts >= 3) {
+            parts.push(theme.fg("error", `Debug: ${attempts} fix attempts ⚠️`));
+          } else if (attempts > 0) {
+            parts.push(theme.fg("warning", `Debug: ${attempts} fix attempt${attempts !== 1 ? "s" : ""}`));
+          } else {
+            parts.push(theme.fg("accent", "Debug: investigating"));
+          }
+        }
+
+        return parts.length > 0
+          ? new Text(parts.join(theme.fg("dim", "  |  ")), 0, 0)
+          : undefined;
       });
     }
   }
