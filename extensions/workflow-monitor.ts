@@ -305,9 +305,40 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.registerCommand("workflow-next", {
-    description: "Start a fresh session for the next workflow phase",
-    async handler(_args, _ctx) {
-      // Implemented in detail below during workflow-next task.
+    description: "Start a fresh session for the next workflow phase (optionally referencing an artifact path)",
+    async handler(args, ctx) {
+      if (!ctx.hasUI) {
+        ctx.ui.notify("workflow-next requires interactive mode", "error");
+        return;
+      }
+
+      const [phase, artifact] = args.trim().split(/\s+/, 2);
+      if (!phase) {
+        ctx.ui.notify("Usage: /workflow-next <phase> [artifact-path]", "error");
+        return;
+      }
+
+      const parentSession = ctx.sessionManager.getSessionFile();
+      const res = await ctx.newSession({ parentSession });
+      if (res.cancelled) return;
+
+      const lines: string[] = [];
+      if (artifact) lines.push(`Continue from artifact: ${artifact}`);
+
+      if (phase === "plan") {
+        lines.push("Use /skill:writing-plans to create the implementation plan.");
+      } else if (phase === "execute") {
+        lines.push("Use /skill:executing-plans (or /skill:subagent-driven-development) to execute the plan.");
+      } else if (phase === "verify") {
+        lines.push("Use /skill:verification-before-completion to verify before finishing.");
+      } else if (phase === "review") {
+        lines.push("Use /skill:requesting-code-review to get review.");
+      } else if (phase === "finish") {
+        lines.push("Use /skill:finishing-a-development-branch to integrate/ship.");
+      }
+
+      ctx.ui.setEditorText(lines.join("\n"));
+      ctx.ui.notify("New session ready. Submit when ready.", "info");
     },
   });
 
