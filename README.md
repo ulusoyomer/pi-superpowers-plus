@@ -44,6 +44,37 @@ Or add to `.pi/settings.json` (project-level) or `~/.pi/agent/config.json` (glob
 
 No configuration required. Skills and extensions activate automatically.
 
+## Upgrading from `pi-superpowers`
+
+If you’re currently using [`pi-superpowers`](https://github.com/coctostan/pi-superpowers), `pi-superpowers-plus` is intended as a drop-in upgrade: you keep the same skill names and workflow, but you also get **active, runtime enforcement** via extensions.
+
+### What stays the same
+- The same core workflow skills (e.g. `/skill:brainstorming`, `/skill:writing-plans`, `/skill:executing-plans`, etc.)
+- The same “structured workflow” idea and phase order
+
+### What’s new in `pi-superpowers-plus`
+- **Workflow Monitor extension** that observes tool calls/results and injects warnings directly into output
+- **TDD discipline warnings** when writing source code without a failing test first
+- **Debug enforcement** escalation after repeated failing tests
+- **Verification gating** for `git commit` / `git push` / `gh pr create` until passing tests are run
+- **Workflow tracking + boundary prompts** (and `/workflow-next` handoff)
+- **Branch safety reminders** (first tool result shows current branch/SHA; first write/edit warns to confirm branch/worktree)
+- **Finish-phase reminder prefill** (docs + learnings)
+- **Plan Tracker tool** (`plan_tracker`) for task lists + TUI progress
+
+### Migration
+Replace `pi-superpowers` with `pi-superpowers-plus` in your config:
+
+```json
+{
+  "packages": ["npm:pi-superpowers-plus"]
+}
+```
+
+Notes:
+- If you keep both packages enabled, you may get duplicate/competing skill guidance.
+- `pi-superpowers-plus` is more “opinionated” at runtime: it will inject warnings into tool output and may gate shipping commands until verification has passed.
+
 ## The Workflow
 
 The skills guide the agent through a consistent development cycle:
