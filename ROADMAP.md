@@ -24,54 +24,51 @@ This roadmap is **directional** (not a promise). Priorities may shift based on r
 
 ---
 
-## v0.2.0 — Reliability & Diagnostics
+## v0.2.0 — Reliability & Diagnostics ✅ Shipped
 
-The "stop losing users silently" release. Add observability so issues can be diagnosed after the fact, and a CI pipeline so regressions don't ship.
+The "stop losing users silently" release. Observability and CI.
 
-### Logging & Error Handling
+- **Logging & Error Handling** — ✅ Shipped in 0.2.0-alpha.1. Logger module, error handling sweep, catch block classification. See [CHANGELOG.md](./CHANGELOG.md).
+- **CI Pipeline** — ✅ Shipped. GitHub Actions CI (vitest + biome check) and publish (tag-triggered npm publish). Biome added, initial format pass done.
 
-**[maintainer]** Build a logger module (`extensions/logging.ts`) writing to `~/.pi/logs/superpowers-plus.log`. Always-on at info level — phase transitions, tool call decisions (allow/block/warn), state changes. Verbose behind `PI_SUPERPOWERS_DEBUG=1` — full event payloads, heuristic scoring, timing. Simple size cap to prevent unbounded growth.
-
-Then sweep every `catch` block in the codebase. Classify each as ignore / log-and-continue / surface-to-user, fix the handling, and add the appropriate log call. Currently 12+ bare `catch {}` blocks silently swallow errors — some hide real failures like git status checks falling through to permissive defaults.
-
-Single task: build the logger, then fix error handling in one pass through the code.
-
-#### Code Review Notes
-
-Minor items identified across all reviews (none blocking, candidates for follow-up):
-
-1. **Only one generation of rotated logs** — Only keeps `.1` file; older logs are overwritten on each rotation. Consider multi-generation rotation (`.1`, `.2`, `.3`) if historical logs prove valuable.
-2. **Logger initialized eagerly at module load** — Singleton created on import, creates log directory even if logging never happens. Consider lazy initialization.
-3. **Permission tests may be platform-specific** — `chmod` tests in `agents-error-handling.test.ts` won't work on Windows. Add `test.skipIf(process.platform === 'win32')` if Windows CI is ever added.
-4. **Logger's own catch blocks lack error detail** — `write()` and `rotateIfNeeded()` silently swallow errors. Consider a one-time stderr fallback so broken logging is at least minimally visible.
-5. **No crash-safety test** — No test verifies the "logger must never crash the application" contract. Add a test that mocks `fs.appendFileSync` to throw and asserts no exception escapes.
-6. **Log file permissions could be more restrictive** — Created with umask-based `0644` (world-readable). Consider `0o600` for defense in depth on shared systems.
-7. **Duplicated logger mock setup across test files** — Three error-handling test files repeat the same mock pattern. Could extract to a shared test utility.
-8. **Unrelated `.gitignore` change** — `.kotadb/` was added in the logging branch. Cosmetic, noted for git history hygiene.
-
-### CI Pipeline
-
-**[infra]** GitHub Actions with three concerns:
-
-- **Tests:** `vitest run` on push and PR
-- **Lint & types:** `biome check` + `tsc --noEmit` on push and PR
-- **Publish:** `npm publish` triggered by git tags, using personal npm account
-
-Prerequisite: add Biome as a dev dependency with a minimal `biome.json` config. Do an initial formatting/lint pass to clean up the codebase before CI enforces it.
+Outstanding code review items from v0.2.0 are tracked as tech debt in v0.3.0 below.
 
 ---
 
 ## v0.3.0 — Hardening
 
-The "safe for strangers to rely on" release. Security fixes, resilient subagent lifecycle, and state that survives across sessions.
+The "safe for strangers to rely on" release. Security fixes, resilient subagent lifecycle, state that survives across sessions, and tech debt cleanup from v0.2.0.
+
+### Biome Lint Cleanup
+
+**[maintainer]** Fix the ~166 biome warnings remaining after the initial format pass. Almost all are auto-fixable style issues (e.g. `useTemplate` — string concatenation → template literals). Run `biome check --write` and verify nothing breaks, or selectively disable rules that don't add value.
+
+### Code Review Debt
+
+**[maintainer]** Outstanding review items from v0.2.0 branches. Three sources:
+
+**From logging review** (`docs/plans/logging-review-fixes.md`):
+1. Replace brittle source-inspection tests with behavioral tests (3 test files read source and check for string patterns instead of mocking + asserting)
+2. Fix log rotation for long-running processes (replace `rotatedThisSession` boolean with time-based check)
+3. Add message truncation (10KB cap) and document sync I/O choice
+
+**From logging code review notes** (ROADMAP v0.2.0 section):
+4. Logger's own catch blocks lack error detail — add one-time stderr fallback
+5. No crash-safety test for the logger
+6. Duplicated logger mock setup across 3 test files — extract to shared utility
+
+**From phase 2 code review** (`docs/plans/2026-02-10-phase2-code-review-findings.md`):
+7. TDD `source-during-red` false-positives during legitimate RED→GREEN work — need to distinguish "test written but not run" from "tests failing"
+8. DebugMonitor conflicts with normal TDD — debug mode activates on any failed test, including intentional RED
+9. Investigation detection misses common non-bash tools (grep, find, ls via tool calls)
+10. "Excessive fix attempts" off-by-one in warning count/wording
 
 ### Security Audit
 
-**[maintainer]** Three targeted fixes:
+**[maintainer]** Two targeted fixes (path traversal already fixed in 0.2.0-alpha.1):
 
 1. **Subagent spawn sanitization** — validate and constrain args passed to `spawn("pi", ...)`. LLM-crafted task strings should not be able to inject flags or shell metacharacters.
 2. **Environment filtering** — replace `{ ...process.env }` spread in subagent spawns with an explicit allowlist of env vars that subagents actually need. Currently leaks every env var the parent process has.
-3. **Path check tightening** — the `docs/plans/` allowlist uses loose `indexOf` matching. Tighten to prevent path traversal if reachable from user input.
 
 ### Subagent Hardening
 
