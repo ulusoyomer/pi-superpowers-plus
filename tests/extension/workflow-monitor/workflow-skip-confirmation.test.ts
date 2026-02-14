@@ -22,7 +22,7 @@ function createWorkflowState(
   return { phases, currentPhase, artifacts, prompted };
 }
 
-function setupWithState(state: WorkflowTrackerState) {
+function setupWithState(_state: WorkflowTrackerState) {
   const fake = createFakePi({ withAppendEntry: true });
   workflowMonitorExtension(fake.api as any);
 
@@ -154,7 +154,7 @@ describe("skip-confirmation gating on /skill transitions", () => {
     };
 
     await onSessionSwitch({}, ctx);
-    const result = await onInput({ source: "user", text: "/skill:executing-plans" }, ctx);
+    const _result = await onInput({ source: "user", text: "/skill:executing-plans" }, ctx);
 
     // Should have prompted
     expect(ctx.ui.select).toHaveBeenCalledTimes(1);
@@ -265,7 +265,7 @@ describe("skip-confirmation gating on /skill transitions", () => {
     };
 
     await onSessionSwitch({}, ctx);
-    const result = await onInput({ source: "user", text: "/skill:executing-plans" }, ctx);
+    const _result = await onInput({ source: "user", text: "/skill:executing-plans" }, ctx);
 
     expect(ctx.ui.select).toHaveBeenCalledTimes(1);
 
@@ -335,7 +335,7 @@ describe("skip-confirmation gating on /skill transitions", () => {
     };
 
     await onSessionSwitch({}, ctx);
-    const result = await onInput({ source: "user", text: "/skill:executing-plans" }, ctx);
+    const _result = await onInput({ source: "user", text: "/skill:executing-plans" }, ctx);
 
     // Summary prompt + 2 individual prompts
     expect(ctx.ui.select).toHaveBeenCalledTimes(3);

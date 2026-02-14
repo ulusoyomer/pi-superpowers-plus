@@ -83,7 +83,7 @@ describe("VerificationMonitor", () => {
     it("returns violation when committing without verification", () => {
       const result = monitor.checkCommitGate("git commit -m 'feat: stuff'");
       expect(result).not.toBeNull();
-      expect(result!.type).toBe("commit-without-verification");
+      expect(result?.type).toBe("commit-without-verification");
     });
 
     it("returns null when committing with recent verification", () => {
@@ -95,13 +95,13 @@ describe("VerificationMonitor", () => {
     it("detects git push", () => {
       const result = monitor.checkCommitGate("git push origin main");
       expect(result).not.toBeNull();
-      expect(result!.type).toBe("push-without-verification");
+      expect(result?.type).toBe("push-without-verification");
     });
 
     it("detects gh pr create", () => {
       const result = monitor.checkCommitGate("gh pr create --title 'feat'");
       expect(result).not.toBeNull();
-      expect(result!.type).toBe("pr-without-verification");
+      expect(result?.type).toBe("pr-without-verification");
     });
 
     it("returns null for non-commit commands", () => {

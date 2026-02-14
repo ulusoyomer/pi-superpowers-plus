@@ -102,7 +102,7 @@ describe("logging", () => {
   });
 
   test("rotation overwrites existing .1 file", () => {
-    const rotatedPath = logPath + ".1";
+    const rotatedPath = `${logPath}.1`;
     fs.writeFileSync(rotatedPath, "old-rotated");
     fs.writeFileSync(logPath, "x".repeat(200));
 
@@ -113,7 +113,7 @@ describe("logging", () => {
   });
 
   test("rotation can run again after rotationCheckInterval", () => {
-    const rotatedPath = logPath + ".1";
+    const rotatedPath = `${logPath}.1`;
     const nowSpy = vi.spyOn(Date, "now");
 
     fs.writeFileSync(logPath, "x".repeat(200));

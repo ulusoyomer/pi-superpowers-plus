@@ -11,7 +11,7 @@ describe("WorkflowHandler workflow-tracker integration", () => {
 
   test("input /skill:writing-plans activates plan phase", () => {
     handler.handleInputText("/skill:writing-plans");
-    expect(handler.getWorkflowState()!.currentPhase).toBe("plan");
+    expect(handler.getWorkflowState()?.currentPhase).toBe("plan");
   });
 
   test("marks prompted state for boundary phase (not current phase)", () => {

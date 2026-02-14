@@ -48,7 +48,7 @@ function createCtx(state: WorkflowTrackerState, hasUI: boolean, selectResponses:
   };
 }
 
-async function setupExtension(state: WorkflowTrackerState) {
+async function setupExtension(_state: WorkflowTrackerState) {
   const fake = createFakePi({ withAppendEntry: true });
   workflowMonitorExtension(fake.api as any);
 

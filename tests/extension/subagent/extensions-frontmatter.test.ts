@@ -6,7 +6,7 @@ describe("agent frontmatter extensions", () => {
     const res = discoverAgents(process.cwd(), "project");
     const impl = res.agents.find((a) => a.name === "implementer");
     expect(impl).toBeTruthy();
-    expect(impl!.extensions).toBeTruthy();
-    expect(impl!.extensions!.some((p: string) => p.includes("tdd-guard"))).toBe(true);
+    expect(impl?.extensions).toBeTruthy();
+    expect(impl?.extensions?.some((p: string) => p.includes("tdd-guard"))).toBe(true);
   });
 });

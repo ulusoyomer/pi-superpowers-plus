@@ -71,7 +71,7 @@ export function createLogger(logPath: string, options?: LoggerOptions): Logger {
     try {
       const stat = fs.statSync(logPath);
       if (stat.size > maxSizeBytes) {
-        fs.renameSync(logPath, logPath + ".1");
+        fs.renameSync(logPath, `${logPath}.1`);
       }
     } catch {
       // File doesn't exist yet — nothing to rotate

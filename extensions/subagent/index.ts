@@ -337,7 +337,7 @@ async function runSingleAgent(
         let event: any;
         try {
           event = JSON.parse(line);
-        } catch (err) {
+        } catch (_err) {
           log.debug(`Ignoring non-JSON line from subagent stdout: ${line.slice(0, 120)}`);
           return;
         }
