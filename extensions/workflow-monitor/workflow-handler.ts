@@ -17,6 +17,7 @@ export interface WorkflowHandler {
   handleToolCall(toolName: string, input: Record<string, unknown>): ToolCallResult;
   handleReadOrInvestigation(toolName: string, path: string): void;
   handleBashResult(command: string, output: string, exitCode: number | undefined): void;
+  /** @internal Used in tests; will be wired to bash events in future */
   handleBashInvestigation(command: string): void;
   isDebugActive(): boolean;
   getDebugFixAttempts(): number;
