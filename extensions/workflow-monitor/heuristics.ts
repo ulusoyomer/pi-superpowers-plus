@@ -1,8 +1,7 @@
 const TEST_PATTERNS = [
   /\.(test|spec)\.(ts|js|tsx|jsx|py|rs|go|java|rb|swift|kt)$/,
-  /^tests?\//,
+  /(^|\/)tests?\//,
   /\/__tests__\//,
-  /\/tests?\//,
   /^test_\w+\.py$/,
   /\/test_\w+\.py$/,
   /\w+_test\.py$/,

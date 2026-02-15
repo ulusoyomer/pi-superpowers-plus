@@ -12,7 +12,7 @@ const TEST_COMMANDS = [
   /\bdotnet\s+test\b/,
 ];
 
-const PASS_PATTERNS = [/\bpassed\b/i, /^ok\s+/m, /Tests:\s+\d+ passed/, /\d+ passing/, /BUILD SUCCESSFUL/];
+const PASS_PATTERNS = [/\d+\s+(tests?\s+)?passed/i, /^ok\s+/m, /Tests:\s+\d+ passed/, /\d+ passing/, /BUILD SUCCESSFUL/];
 
 const FAIL_PATTERNS = [/\bfailed\b/i, /^FAIL\b/m, /\d+ failing/, /BUILD FAILED/, /ERRORS!/];
 

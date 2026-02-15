@@ -60,4 +60,10 @@ describe("parseTestResult", () => {
   test("returns null for ambiguous output with no exit code", () => {
     expect(parseTestResult("some unknown output", undefined)).toBeNull();
   });
+
+  test("does not match bare 'passed' without numeric prefix", () => {
+    expect(parseTestResult("All checks passed", 0)).toBe(true);
+    expect(parseTestResult("All checks passed", undefined)).toBeNull();
+    // The pass-detection should rely on exit code, not bare "passed"
+  });
 });

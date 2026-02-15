@@ -20,6 +20,16 @@ describe("isTestFile", () => {
   test("matches files in test/ directory", () => {
     expect(isTestFile("test/utils.ts")).toBe(true);
   });
+  test("matches test directory paths (exercises directory pattern, not filename)", () => {
+    // These use non-.test filenames so only the directory pattern matches
+    expect(isTestFile("tests/utils.ts")).toBe(true);
+    expect(isTestFile("test/utils.ts")).toBe(true);
+    expect(isTestFile("src/tests/utils.ts")).toBe(true);
+    expect(isTestFile("src/test/utils.ts")).toBe(true);
+    // Also verify .test.ts in test dirs still works
+    expect(isTestFile("tests/foo.test.ts")).toBe(true);
+    expect(isTestFile("src/tests/foo.test.ts")).toBe(true);
+  });
   test("matches python test files (test_*.py)", () => {
     expect(isTestFile("test_utils.py")).toBe(true);
   });
