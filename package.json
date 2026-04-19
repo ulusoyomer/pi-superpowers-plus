@@ -1,7 +1,7 @@
 {
   "name": "pi-superpowers-plus",
-  "version": "0.4.1",
-  "description": "Superpowers workflow skills adapted for pi",
+  "version": "0.5.0",
+  "description": "Superpowers workflow skills + runtime enforcement for pi. Uses pi-subagents for subagent delegation.",
   "keywords": [
     "pi-package"
   ],
@@ -11,14 +11,16 @@
     "check": "biome check . && vitest run"
   },
   "license": "MIT",
-  "author": "coctostan",
+  "author": "ulusoyomer",
+  "contributors": [
+    "coctostan"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/coctostan/pi-superpowers-plus.git"
+    "url": "https://github.com/ulusoyomer/pi-superpowers-plus.git"
   },
   "files": [
     "extensions/",
-    "agents/",
     "skills/",
     "banner.jpg",
     "LICENSE",
@@ -27,8 +29,7 @@
   "pi": {
     "extensions": [
       "extensions/plan-tracker.ts",
-      "extensions/workflow-monitor.ts",
-      "extensions/subagent/index.ts"
+      "extensions/workflow-monitor.ts"
     ],
     "skills": [
       "skills"

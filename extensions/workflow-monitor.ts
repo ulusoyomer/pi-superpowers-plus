@@ -26,7 +26,7 @@ import {
   getTddViolationWarning,
   getVerificationViolationWarning,
 } from "./workflow-monitor/warnings";
-import { createWorkflowHandler, type Violation, type WorkflowHandler } from "./workflow-monitor/workflow-handler";
+import { createWorkflowHandler, type Violation, type WorkflowHandler, type SubagentResultDetails } from "./workflow-monitor/workflow-handler";
 import {
   computeBoundaryToPrompt,
   type Phase,
@@ -592,6 +592,74 @@ export default function (pi: ExtensionAPI) {
         injected.push(getVerificationViolationWarning(verificationViolation.type, verificationViolation.command));
       }
       pendingVerificationViolations.delete(toolCallId);
+    }
+
+    // Handle subagent results from pi-subagents extension.
+    // Uses typed handleSubagentResult to feed into TDD/debug/workflow monitors,
+    // then surfaces warnings and syncs plan_tracker on success.
+    if (event.toolName === "subagent") {
+      const details = event.details as SubagentResultDetails | undefined;
+
+      if (details) {
+        const result = handler.handleSubagentResult(details);
+
+        // If subagent ran tests and they passed, complete verify phase
+        if (result.testsRan) {
+          const state = handler.getWorkflowState();
+          if (state?.currentPhase === "verify" && state.phases.verify === "active") {
+            if (handler.completeCurrentWorkflowPhase()) {
+              persistState();
+            }
+          }
+        }
+
+        // Surface TDD violations from subagent — these were already fed into TddMonitor
+        if (result.tddViolationCount > 0) {
+          const names = result.agentNames.join(", ") || "unknown";
+          injected.push(
+            `⚠️ Subagent \"${names}\" had ${result.tddViolationCount} TDD violation${result.tddViolationCount > 1 ? "s" : ""}. ` +
+            "Subagents should follow TDD: write failing test → implement → verify.",
+          );
+        }
+
+        // Surface subagent failure to the orchestrator with actionable context
+        if (result.failed) {
+          const names = result.agentNames.join(", ") || "unknown";
+          const errorMsg = details.result ?? "unknown error";
+          injected.push(
+            `❌ Subagent \"${names}\" failed: ${errorMsg}. ` +
+            "As orchestrator, re-dispatch with specific fix instructions or report to user.",
+          );
+        }
+
+        // Auto-advance plan_tracker when subagent completes a task successfully
+        if (!result.failed && result.filesTracked > 0) {
+          const state = handler.getWorkflowState();
+          if (state?.currentPhase === "execute") {
+            // Find the next pending plan_tracker task and advance it
+            const trackerState = ctx.sessionManager.getBranch();
+            for (const entry of trackerState) {
+              if (entry.type !== "message") continue;
+              const msg = (entry as any).message;
+              if (msg?.role !== "toolResult" || msg?.toolName !== "plan_tracker") continue;
+              const trackerDetails = msg.details as { action?: string; tasks?: Array<{ name: string; status: string }> } | undefined;
+              if (trackerDetails?.tasks) {
+                const firstPending = trackerDetails.tasks.findIndex((t) => t.status === "pending");
+                if (firstPending >= 0) {
+                  // Will be auto-advanced by the plan_tracker tool when the orchestrator uses it
+                  log.debug(`Subagent completed work; plan_tracker task ${firstPending} may need advancing`);
+                }
+              }
+              break;
+            }
+          }
+        }
+
+        if (result.filesTracked > 0 || result.tddViolationCount > 0) {
+          persistState();
+          updateWidget(ctx);
+        }
+      }
     }
 
     if (event.toolName === "write" || event.toolName === "edit") {

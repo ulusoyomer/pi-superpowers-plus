@@ -4,16 +4,22 @@
 
 Structured workflow skills and active enforcement extensions for [pi](https://github.com/badlogic/pi-mono).
 
+> **Fork of [coctostan/pi-superpowers-plus](https://github.com/coctostan/pi-superpowers-plus)** — adapted to use [pi-subagents](https://github.com/nicobailon/pi-subagents) for subagent delegation instead of the built-in subagent extension.
+
 Your coding agent doesn't just know the rules - it follows them. Skills teach the agent *what* to do (brainstorm before building, write tests before code, verify before claiming done). Extensions enforce it in real time (the workflow monitor watches every file write and warns when you skip the test).
 
 ## What You Get When You Install This
 
 **12 workflow skills** that guide the agent through a structured development process - from brainstorming ideas through shipping code.
 
-**3 extensions** that run silently in the background:
+**2 extensions** that run silently in the background:
 - **Workflow Monitor** — warns on TDD violations, tracks debug cycles, gates commits on verification, tracks workflow phase, and serves reference content on demand.
-- **Subagent** — registers a `subagent` tool for dispatching implementation and review work to isolated subprocess agents, with bundled agent definitions and structured results.
 - **Plan Tracker** — tracks task progress with a TUI widget.
+
+**Requires [pi-subagents](https://github.com/nicobailon/pi-subagents)** for subagent delegation:
+- Provides the `subagent` tool used by workflow skills (implementer, reviewer, worker dispatch)
+- Full-featured: chain/parallel modes, async execution, model fallback, skill injection, MCP integration
+- Install separately: `pi install npm:pi-subagents`
 
 **After installation**:
 - Any time the agent writes a source file without a failing test, it gets a warning injected into the tool result.
@@ -21,6 +27,7 @@ Your coding agent doesn't just know the rules - it follows them. Skills teach th
 - During **Brainstorm**/**Plan**, writes are restricted to `docs/plans/` (writes elsewhere trigger a process violation).
 - On the first tool output of a session (inside a git repo), the agent is shown the **current git branch (or detached HEAD short SHA)**.
 - On the first write/edit of a session (inside a git repo), the agent is warned to **confirm it's on the correct branch/worktree** before continuing.
+- **Subagent results** are tracked: file changes, test runs, and TDD violations from subagents feed into the workflow monitor.
 
 The agent sees these warnings as part of its normal tool output - no configuration needed.
 
@@ -30,21 +37,23 @@ More detail:
 
 ## Install
 
+**Prerequisite:** Install pi-subagents first:
+
 ```bash
-pi install npm:pi-superpowers-plus
+pi install npm:pi-subagents
 ```
 
-Or from git:
+Then install this package:
 
 ```bash
-pi install git:github.com/coctostan/pi-superpowers-plus
+pi install git:github.com/ulusoyomer/pi-superpowers-plus
 ```
 
 Or add to `.pi/settings.json` (project-level) or `~/.pi/agent/config.json` (global):
 
 ```json
 {
-  "packages": ["npm:pi-superpowers-plus"]
+  "packages": ["npm:pi-subagents", "npm:pi-superpowers-plus"]
 }
 ```
 
@@ -52,11 +61,10 @@ No configuration required. Skills and extensions activate automatically.
 
 ## Support
 
-- Questions / support: https://github.com/coctostan/pi-superpowers-plus/discussions
-- Bugs: https://github.com/coctostan/pi-superpowers-plus/issues/new/choose
-- Feature requests: https://github.com/coctostan/pi-superpowers-plus/issues/new/choose
-- Roadmap: [`ROADMAP.md`](ROADMAP.md)
-- Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Questions / support: https://github.com/ulusoyomer/pi-superpowers-plus/discussions
+- Bugs: https://github.com/ulusoyomer/pi-superpowers-plus/issues/new/choose
+- Feature requests: https://github.com/ulusoyomer/pi-superpowers-plus/issues/new/choose
+- Upstream: https://github.com/coctostan/pi-superpowers-plus
 
 ## Upgrading from `pi-superpowers`
 
@@ -262,23 +270,25 @@ The orchestrating agent's enforcement is advisory (warnings injected into tool r
 
 ## Subagent Dispatch
 
-A bundled `subagent` tool lets the orchestrating agent spawn isolated subprocess agents for implementation and review tasks. No external dependencies required.
+This package uses [pi-subagents](https://github.com/nicobailon/pi-subagents) for subagent execution. All `pi-subagents` features are available: chain/parallel modes, async execution, model fallback, skill injection, worktree isolation, MCP integration, and more.
 
-### Bundled Agents
+### Required Agents
 
-| Agent | Purpose | Tools | Extensions |
-|-------|---------|-------|------------|
-| `implementer` | Strict TDD implementation | read, write, edit, bash, lsp | — |
-| `worker` | General-purpose task execution | read, write, edit, bash, lsp | — |
-| `code-reviewer` | Production readiness review | read, bash (read-only) | — |
-| `spec-reviewer` | Plan/spec compliance check | read, bash (read-only) | — |
+Workflow skills expect the following agents to be defined in `~/.pi/agent/agents/`:
 
-Agent definitions live in `agents/*.md` and use YAML frontmatter to declare tools, model, extensions, and a system prompt body.
+| Agent | Purpose | Used by |
+|-------|---------|----------|
+| `implementer` | TDD implementation | `subagent-driven-development` |
+| `worker` | General-purpose task execution | `dispatching-parallel-agents` |
+| `code-reviewer` | Production readiness review | `requesting-code-review`, `subagent-driven-development` |
+| `spec-reviewer` | Plan/spec compliance check | `subagent-driven-development` |
+
+Agent definitions are standard pi-subagents markdown files with YAML frontmatter. See [pi-subagents docs](https://github.com/nicobailon/pi-subagents) for full configuration options (model, tools, extensions, skills, thinking, fallbackModels, etc.).
 
 ### Single Agent
 
 ```ts
-subagent({ agent: "implementer", task: "Implement the retry logic per docs/plans/retry-plan.md Task 3" })
+subagent({ agent: "implementer", task: "Implement the retry logic per docs/plans/retry-plan.md Task 3", skill: "test-driven-development" })
 ```
 
 ### Parallel Tasks
@@ -289,19 +299,24 @@ subagent({
     { agent: "worker", task: "Fix failing test in auth.test.ts" },
     { agent: "worker", task: "Fix failing test in cache.test.ts" },
   ],
+  worktree: true,
+  concurrency: 2,
 })
 ```
 
 ### Structured Results
 
-Single-agent results include:
+Single-agent results from pi-subagents include:
 - `filesChanged` — list of files written/edited
 - `testsRan` — whether any test commands were executed
 - `status` — `"completed"` or `"failed"`
+- `tddViolations` — count of TDD violations detected
+
+These are consumed by the workflow monitor to track progress.
 
 ### Custom Agents
 
-Add `.md` files to an `agents/` directory at your project root. They override bundled agents of the same name. Frontmatter fields:
+Add `.md` files to `~/.pi/agent/agents/` (user-level) or `.pi/agents/` (project-level). See [pi-subagents documentation](https://github.com/nicobailon/pi-subagents) for the full agent frontmatter schema:
 
 ```yaml
 ---
@@ -309,7 +324,13 @@ name: my-agent
 description: What this agent does
 tools: read, write, edit, bash
 model: claude-sonnet-4-5
-extensions: ../extensions/my-guard.ts
+fallbackModels: openai/gpt-5-mini, anthropic/claude-sonnet-4
+thinking: high
+skills: safe-bash
+systemPromptMode: replace
+inheritProjectContext: true
+inheritSkills: false
+maxSubagentDepth: 1
 ---
 
 System prompt body here.
@@ -328,8 +349,8 @@ Based on [Superpowers](https://github.com/obra/superpowers) by Jesse Vincent, po
 | **Debug enforcement** | Manual discipline | Manual discipline | Extension escalates after repeated failures |
 | **Verification gating** | — | — | Blocks commit/push/PR until tests pass |
 | **Workflow tracking** | — | — | Phase strip, boundary prompts, `/workflow-next` |
-| **Subagent dispatch** | — | — | Bundled `subagent` tool + 4 agent definitions |
-| **TDD in subagents** | — | — | Three-scenario TDD instructions in agent profiles + prompt templates + runtime warnings |
+| **Subagent dispatch** | — | — | Bundled `subagent` tool + 4 agent definitions | Via [pi-subagents](https://github.com/nicobailon/pi-subagents) — full chain/parallel/async, model fallback, skill injection, MCP integration |
+| **TDD in subagents** | — | — | Three-scenario TDD instructions in agent profiles + prompt templates + runtime warnings | Same, via pi-subagents agent profiles + workflow monitor subagent result tracking |
 | **Structured results** | — | — | filesChanged, testsRan per agent |
 | **Reference content** | Everything in SKILL.md | Everything in SKILL.md | Inline guidance + on-demand `workflow_reference` tool for extended detail |
 | **Plan tracker** | — | — | `plan_tracker` tool with TUI progress widget |
@@ -338,32 +359,24 @@ Based on [Superpowers](https://github.com/obra/superpowers) by Jesse Vincent, po
 
 ```
 pi-superpowers-plus/
-├── agents/                            # Bundled agent definitions (4 agents)
-│   ├── implementer.md                 # Strict TDD implementation agent
-│   ├── worker.md                      # General-purpose task agent
-│   ├── code-reviewer.md               # Production readiness reviewer
-│   └── spec-reviewer.md               # Plan/spec compliance reviewer
 ├── extensions/
 │   ├── logging.ts                     # File-based diagnostic logger (10KB truncation, time-based rotation)
 │   ├── plan-tracker.ts                # Task tracking tool + TUI widget
 │   ├── workflow-monitor.ts            # Extension entry point (event wiring)
-│   ├── workflow-monitor/
-│   │   ├── tdd-monitor.ts             # TDD phase state machine
-│   │   ├── debug-monitor.ts           # Debug mode escalation
-│   │   ├── verification-monitor.ts    # Commit/push/PR gating
-│   │   ├── workflow-tracker.ts        # Workflow phase tracking + parseSkillName
-│   │   ├── workflow-transitions.ts    # Phase boundary prompt definitions
-│   │   ├── workflow-handler.ts        # Testable core logic (combines monitors)
-│   │   ├── heuristics.ts             # File classification (test vs source)
-│   │   ├── test-runner.ts            # Test command/result detection
-│   │   ├── investigation.ts          # Investigation signal detection
-│   │   ├── git.ts                    # Git branch/SHA detection (branch safety)
-│   │   ├── warnings.ts              # Violation warning content
-│   │   ├── skip-confirmation.ts      # Phase-skip confirmation logic
-│   │   └── reference-tool.ts        # On-demand reference loading
-│   └── subagent/
-│       ├── index.ts                   # Subagent tool registration + execution
-│       └── agents.ts                  # Agent discovery + frontmatter parsing
+│   └── workflow-monitor/
+│       ├── tdd-monitor.ts             # TDD phase state machine
+│       ├── debug-monitor.ts           # Debug mode escalation
+│       ├── verification-monitor.ts    # Commit/push/PR gating
+│       ├── workflow-tracker.ts        # Workflow phase tracking + parseSkillName
+│       ├── workflow-transitions.ts    # Phase boundary prompt definitions
+│       ├── workflow-handler.ts        # Testable core logic (combines monitors)
+│       ├── heuristics.ts             # File classification (test vs source)
+│       ├── test-runner.ts            # Test command/result detection
+│       ├── investigation.ts          # Investigation signal detection
+│       ├── git.ts                    # Git branch/SHA detection (branch safety)
+│       ├── warnings.ts              # Violation warning content
+│       ├── skip-confirmation.ts      # Phase-skip confirmation logic
+│       └── reference-tool.ts        # On-demand reference loading
 ├── skills/                           # 12 workflow skills (24 markdown files)
 │   ├── brainstorming/
 │   ├── writing-plans/

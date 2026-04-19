@@ -37,7 +37,8 @@ Fill the template at `code-reviewer.md` in this skill directory, then dispatch a
 
 **How to dispatch:**
 
-Use the `subagent` tool with the code-reviewer template filled in:
+Use the `subagent` tool with the code-reviewer template filled in.
+This package delegates to `pi-subagents` for subagent execution — all `pi-subagents` parameters are available.
 
 ```ts
 subagent({ agent: "code-reviewer", task: "... filled template ..." })

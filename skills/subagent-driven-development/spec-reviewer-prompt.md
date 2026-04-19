@@ -1,6 +1,14 @@
 # Spec Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent.
+Use this template when dispatching a spec compliance reviewer subagent via `pi-subagents`.
+
+```ts
+subagent({
+  agent: "spec-reviewer",
+  task: "... filled prompt ...",
+  // context: "fork" is NOT recommended for reviewers — they should be objective
+})
+```
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 

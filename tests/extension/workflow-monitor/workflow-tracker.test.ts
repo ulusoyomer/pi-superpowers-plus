@@ -142,8 +142,13 @@ describe("WorkflowTracker detection helpers", () => {
       "writing-plans": "plan",
       "executing-plans": "execute",
       "subagent-driven-development": "execute",
+      "dispatching-parallel-agents": "execute",
+      "test-driven-development": "execute",
+      "systematic-debugging": "execute",
+      "using-git-worktrees": "execute",
       "verification-before-completion": "verify",
       "requesting-code-review": "review",
+      "receiving-code-review": "review",
       "finishing-a-development-branch": "finish",
     });
   });

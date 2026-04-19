@@ -86,7 +86,7 @@ describe("WorkflowHandler", () => {
   test("no debug violation when investigation bash command used", () => {
     handler.handleBashResult("npx vitest run", "1 failing", 1);
     handler.handleBashResult("npx vitest run", "1 failing", 1);
-    handler.handleBashInvestigation("grep -rn 'error' src/");
+    handler.handleBashResult("grep -rn 'error' src/", "", 0);
     const result = handler.handleToolCall("edit", { path: "src/foo.ts", oldText: "a", newText: "b" });
     expect(result.violation).toBeNull();
   });

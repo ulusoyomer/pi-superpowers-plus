@@ -1,6 +1,16 @@
 # Implementer Subagent Prompt Template
 
-Use this template when dispatching an implementer subagent.
+Use this template when dispatching an implementer subagent via `pi-subagents`.
+
+```ts
+subagent({
+  agent: "implementer",
+  task: "... filled prompt ...",
+  skill: "test-driven-development",  // Auto-inject TDD skill into subagent
+})
+```
+
+> **pi-subagents parameters available:** `model`, `skill`, `context` (`"fork"` to inherit session), `output`, `reads`, `cwd`, `sessionDir`, `async`, `share`, `includeProgress`, etc.
 
 ```
 Dispatch a subagent with this prompt:

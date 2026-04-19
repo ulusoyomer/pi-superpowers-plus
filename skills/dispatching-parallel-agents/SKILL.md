@@ -67,7 +67,8 @@ Each agent gets:
 
 **How to dispatch:**
 
-Use the `subagent` tool in parallel mode:
+Use the `subagent` tool in parallel mode.
+This package delegates to `pi-subagents` for subagent execution — all `pi-subagents` parameters are available (`worktree`, `concurrency`, `model`, `skill`, etc.).
 
 ```ts
 subagent({
@@ -76,6 +77,8 @@ subagent({
     { agent: "worker", task: "Fix batch-completion-behavior.test.ts failures" },
     { agent: "worker", task: "Fix tool-approval-race-conditions.test.ts failures" },
   ],
+  concurrency: 3,
+  worktree: true,
 })
 ```
 
@@ -159,6 +162,7 @@ subagent({
     { agent: "worker", task: "Fix batch-completion-behavior.test.ts" },
     { agent: "worker", task: "Fix tool-approval-race-conditions.test.ts" },
   ],
+  worktree: true,
 })
 ```
 

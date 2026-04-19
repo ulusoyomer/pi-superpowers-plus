@@ -65,9 +65,14 @@ export const SKILL_TO_PHASE: Record<string, Phase> = {
   "writing-plans": "plan",
   "executing-plans": "execute",
   "subagent-driven-development": "execute",
+  "dispatching-parallel-agents": "execute",
+  "test-driven-development": "execute",
+  "systematic-debugging": "execute",
   "verification-before-completion": "verify",
   "requesting-code-review": "review",
+  "receiving-code-review": "review",
   "finishing-a-development-branch": "finish",
+  "using-git-worktrees": "execute",
 };
 
 const PLANS_DIR_RE = /^docs\/plans\//;

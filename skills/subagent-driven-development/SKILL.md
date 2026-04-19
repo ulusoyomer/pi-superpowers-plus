@@ -100,10 +100,11 @@ digraph process {
 
 **How to dispatch:**
 
-Use the `subagent` tool directly with the template text filled in:
+Use the `subagent` tool directly with the template text filled in.
+This package delegates to `pi-subagents` for subagent execution — all `pi-subagents` parameters are available (`model`, `skill`, `context`, `output`, `reads`, etc.).
 
 ```ts
-subagent({ agent: "implementer", task: "... full implementer prompt text ..." })
+subagent({ agent: "implementer", task: "... full implementer prompt text ...", skill: "test-driven-development" })
 ```
 
 ```ts

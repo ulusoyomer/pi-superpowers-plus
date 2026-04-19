@@ -2,6 +2,9 @@
 
 You are reviewing code changes for production readiness.
 
+> This prompt is dispatched via `pi-subagents` to the `code-reviewer` agent.
+> All `pi-subagents` parameters are available (model, skill, context, etc.).
+
 ## Boundaries
 
 - **Read code, run tests, run git commands: yes**

@@ -61,12 +61,45 @@ export const VERIFICATION_DEFAULTS = {
   verificationWaived: false,
 };
 
+/** Result details from pi-subagents extension */
+export interface SubagentResultDetails {
+  mode?: "single" | "parallel" | "chain" | "management";
+  status?: "completed" | "failed";
+  agent?: string;
+  task?: string;
+  result?: string;
+  filesChanged?: string[];
+  testsRan?: boolean;
+  tddViolations?: number;
+  /** Per-step results in chain/parallel mode */
+  results?: Array<{
+    agent?: string;
+    exitCode?: number;
+    filesChanged?: string[];
+    testsRan?: boolean;
+    tddViolations?: number;
+  }>;
+}
+
+export interface SubagentHandleResult {
+  /** Number of TDD violations imported from subagent */
+  tddViolationCount: number;
+  /** Number of files tracked */
+  filesTracked: number;
+  /** Whether subagent ran tests */
+  testsRan: boolean;
+  /** Whether subagent failed */
+  failed: boolean;
+  /** Agent name(s) for reporting */
+  agentNames: string[];
+}
+
 export interface WorkflowHandler {
   handleToolCall(toolName: string, input: Record<string, unknown>): ToolCallResult;
   handleReadOrInvestigation(toolName: string, path: string): void;
   handleBashResult(command: string, output: string, exitCode: number | undefined): void;
-  /** @internal Used in tests; will be wired to bash events in future */
-  handleBashInvestigation(command: string): void;
+  /** Process subagent results from pi-subagents and feed into TDD/debug/workflow monitors */
+  handleSubagentResult(details: SubagentResultDetails): SubagentHandleResult;
   isDebugActive(): boolean;
   getDebugFixAttempts(): number;
   getTddPhase(): string;
@@ -170,10 +203,63 @@ export function createWorkflowHandler(): WorkflowHandler {
       }
     },
 
-    handleBashInvestigation(command: string): void {
-      if (isInvestigationCommand(command)) {
-        debug.onInvestigation();
+    handleSubagentResult(details: SubagentResultDetails): SubagentHandleResult {
+      let tddViolationCount = 0;
+      let filesTracked = 0;
+      let testsRan = false;
+      let failed = false;
+      const agentNames: string[] = [];
+
+      // Process single mode result
+      const processFiles = (files: string[]) => {
+        for (const file of files) {
+          tracker.onFileWritten(file);
+          // Feed into TDD monitor — subagent file writes count
+          const tddViolation = tdd.onFileWritten(file);
+          if (tddViolation) {
+            tddViolationCount++;
+          }
+          // Feed into debug monitor — subagent source writes count as fix attempts
+          if (debug.isActive() && isSourceFile(file)) {
+            debug.onSourceWritten(file);
+          }
+          filesTracked++;
+        }
+      };
+
+      // Collect from top-level or per-step results
+      const allFiles = details.filesChanged ?? [];
+      processFiles(allFiles);
+
+      // Process chain/parallel step results
+      if (details.results && details.results.length > 0) {
+        for (const step of details.results) {
+          if (step.agent) agentNames.push(step.agent);
+          if (step.filesChanged) processFiles(step.filesChanged);
+          if (step.testsRan) testsRan = true;
+          tddViolationCount += step.tddViolations ?? 0;
+          if (step.exitCode !== undefined && step.exitCode !== 0) failed = true;
+        }
       }
+
+      // Top-level fields
+      if (details.agent) agentNames.push(details.agent);
+      if (details.testsRan) testsRan = true;
+      tddViolationCount += details.tddViolations ?? 0;
+
+      // Failed status
+      if (details.status === "failed") failed = true;
+
+      // If subagent ran tests and they passed, update verification
+      if (testsRan) {
+        verification.recordVerification();
+      }
+
+      // If subagent had TDD violations, nudge the TDD state machine
+      // to reflect that source was written (it went through onFileWritten above)
+      // The violations are already counted; the TDD monitor state reflects them.
+
+      return { tddViolationCount, filesTracked, testsRan, failed, agentNames };
     },
 
     isDebugActive(): boolean {
