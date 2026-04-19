@@ -15,6 +15,7 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { log } from "./logging.js";
+import { AsyncSubagentMonitor } from "./workflow-monitor/async-subagent-monitor";
 import { getCurrentGitRef } from "./workflow-monitor/git";
 import { loadReference, REFERENCE_TOPICS } from "./workflow-monitor/reference-tool";
 import { getUnresolvedPhases, getUnresolvedPhasesBefore } from "./workflow-monitor/skip-confirmation";
@@ -110,6 +111,17 @@ export function reconstructState(ctx: ExtensionContext, handler: WorkflowHandler
 
 export default function (pi: ExtensionAPI) {
   const handler = createWorkflowHandler();
+
+  // Async subagent monitor — polls async jobs and feeds results into handler
+  const asyncMonitor = new AsyncSubagentMonitor(handler, (details, agentName) => {
+    // When an async subagent completes, inject warnings just like sync mode
+    if (details.tddViolations && details.tddViolations > 0) {
+      log.debug(`Async subagent ${agentName} had ${details.tddViolations} TDD violations`);
+    }
+    if (details.status === "failed") {
+      log.debug(`Async subagent ${agentName} failed: ${details.result ?? "unknown"}`);
+    }
+  });
 
   // Pending warnings are keyed by toolCallId to avoid cross-call leakage when
   // tool results are interleaved.
@@ -604,6 +616,16 @@ export default function (pi: ExtensionAPI) {
     // then surfaces warnings and syncs plan_tracker on success.
     if (event.toolName === "subagent") {
       const details = event.details as SubagentResultDetails | undefined;
+
+      // Detect async dispatch — when subagent returns asyncId + asyncDir,
+      // track it and poll for completion
+      if (details?.asyncId && details?.asyncDir) {
+        const agentName = details.agent ?? details.results?.[0]?.agent ?? "unknown";
+        asyncMonitor.track(details.asyncId, details.asyncDir, agentName);
+        log.debug(`Async subagent dispatched: ${agentName} [${details.asyncId}]`);
+        // No warnings to inject yet — will come when async job completes
+        return undefined;
+      }
 
       if (details) {
         const result = handler.handleSubagentResult(details);

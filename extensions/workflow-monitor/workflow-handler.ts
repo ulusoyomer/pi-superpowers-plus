@@ -79,6 +79,9 @@ export interface SubagentResultDetails {
     testsRan?: boolean;
     tddViolations?: number;
   }>;
+  /** Async mode: set when subagent is dispatched in background */
+  asyncId?: string;
+  asyncDir?: string;
 }
 
 export interface SubagentHandleResult {
