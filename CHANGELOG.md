@@ -7,11 +7,37 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.4.0] — 2026-04-19
+
+### Summary
+
+Major architectural refactor. Replaced the bundled subagent extension with [pi-subagents](https://www.npmjs.com/package/pi-subagents) as an external dependency, added async subagent monitoring, and improved typed subagent result handling throughout the workflow monitor.
+
+### Added
+
+- **pi-subagents integration** — The fork now delegates all subagent functionality to the `pi-subagents` package (by nicobailon). Users must have `pi-subagents` installed separately (`pi install pi-subagents`). This replaces the bundled subagent extension, agents, and all related code.
+- **Async subagent monitoring** (`async-subagent-monitor.ts`) — When `pi-subagents` dispatches a subagent in async mode, the workflow monitor detects the `{ asyncId, asyncDir }` response, polls `status.json` / `result.json` for completion, and feeds results into the workflow handler for TDD, debug, and workflow tracking.
+- **Typed subagent result parsing** — `SubagentResultDetails` interface replaces `any` type when reading subagent tool results. Chain, parallel, and single modes are all handled with proper type safety.
+- **`handleSubagentResult()` in workflow-handler** — Feeds subagent results into `TddMonitor`, `DebugMonitor`, `WorkflowTracker`, and `VerificationMonitor` so the main session's state reflects subagent activity.
+- **Async dispatch detection** — `tool_result` event handler detects `asyncId` + `asyncDir` in subagent details and starts tracking automatically.
+- **Auto-cleanup** — Async job directories are cleaned up 30 seconds after completion.
+- **Expanded `SKILL_TO_PHASE` mappings** — Added: `test-driven-development`, `dispatching-parallel-agents`, `systematic-debugging`, `receiving-code-review`, `using-git-worktrees`.
+- **7 async monitor tests** — Completion, failure, chain mode, missing files, duplicate poll protection, job limit, and cleanup.
+- **16 subagent integration tests** — TDD violation detection, failure surfacing, file tracking, workflow phase advancement, and plan_tracker auto-advance.
+
+### Changed
+
+- **Skill files updated** — `subagent-driven-development/SKILL.md`, `dispatching-parallel-agents/SKILL.md`, `requesting-code-review/SKILL.md` now document `pi-subagents` tool parameters.
+- **Prompt templates updated** — `implementer-prompt.md`, `spec-reviewer-prompt.md`, `code-quality-reviewer-prompt.md`, `code-reviewer.md` include pi-subagents context.
+- **README rewritten** — Documents pi-subagents prerequisite, new architecture, and updated install instructions.
+- **Package version** bumped to `0.5.0`.
 
 ### Removed
 
-- **`tdd-guard` extension** — TDD enforcement is now handled via runtime warnings in `workflow-monitor` and three-scenario TDD instructions embedded in agent profiles and skill text. Agent profiles no longer need `extensions: ../extensions/tdd-guard.ts` in their frontmatter.
+- **`extensions/subagent/`** — 6 files (agents.ts, concurrency.ts, env.ts, index.ts, lifecycle.ts, timeout.ts) replaced by `pi-subagents` package.
+- **`agents/`** — 4 bundled agent definitions (implementer.md, worker.md, code-reviewer.md, spec-reviewer.md) removed in favor of user-defined agents.
+- **`tests/extension/subagent/`** — 10 test files removed (2,721 lines of bundled subagent code deleted).
+- **`handleBashInvestigation`** — Dead code removed from workflow-handler.
 
 ---
 
