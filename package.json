@@ -39,6 +39,7 @@
     "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*",
+    "pi-subagents": ">=0.17.0",
     "@sinclair/typebox": "*"
   },
   "devDependencies": {
