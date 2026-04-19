@@ -7,7 +7,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { createMockLogger } from "../../helpers/mock-logger.js";
-import { createWorkflowHandler, type SubagentResultDetails } from "../../../extensions/workflow-monitor/workflow-handler.js";
+import { createWorkflowHandler } from "../../../extensions/workflow-monitor/workflow-handler.js";
 
 vi.mock("../../../extensions/logging.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../extensions/logging.js")>();
@@ -18,7 +18,7 @@ vi.mock("../../../extensions/logging.js", async (importOriginal) => {
 function createHandler() {
   const originalCwd = process.cwd();
   const tmpDir = `/tmp/subagent-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  require("fs").mkdirSync(tmpDir, { recursive: true });
+  require("node:fs").mkdirSync(tmpDir, { recursive: true });
   process.chdir(tmpDir);
   const handler = createWorkflowHandler();
   return {
@@ -26,7 +26,7 @@ function createHandler() {
     cleanup() {
       process.chdir(originalCwd);
       try {
-        require("fs").rmSync(tmpDir, { recursive: true, force: true });
+        require("node:fs").rmSync(tmpDir, { recursive: true, force: true });
       } catch {}
     },
   };
@@ -130,11 +130,7 @@ describe("handleSubagentResult — multi-step results", () => {
     try {
       const result = handler.handleSubagentResult({
         mode: "chain",
-        results: [
-          { agent: "scout" },
-          { agent: "planner" },
-          { agent: "worker" },
-        ],
+        results: [{ agent: "scout" }, { agent: "planner" }, { agent: "worker" }],
       });
       expect(result.agentNames).toContain("scout");
       expect(result.agentNames).toContain("planner");
@@ -197,9 +193,7 @@ describe("handleSubagentResult — multi-step results", () => {
     try {
       const result = handler.handleSubagentResult({
         mode: "chain",
-        results: [
-          { agent: "implementer", testsRan: true },
-        ],
+        results: [{ agent: "implementer", testsRan: true }],
       });
       expect(result.testsRan).toBe(true);
     } finally {
@@ -242,7 +236,7 @@ describe("handleSubagentResult — TDD state", () => {
 
   it("does not create TDD violation when test file exists before source is written", () => {
     const { handler, cleanup } = createHandler();
-    const fs = require("fs");
+    const fs = require("node:fs");
     const cwd = process.cwd();
     try {
       // Create the test file on disk so TDD monitor's fileExists check passes

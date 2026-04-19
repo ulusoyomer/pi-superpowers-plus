@@ -26,7 +26,12 @@ import {
   getTddViolationWarning,
   getVerificationViolationWarning,
 } from "./workflow-monitor/warnings";
-import { createWorkflowHandler, type Violation, type WorkflowHandler, type SubagentResultDetails } from "./workflow-monitor/workflow-handler";
+import {
+  createWorkflowHandler,
+  type SubagentResultDetails,
+  type Violation,
+  type WorkflowHandler,
+} from "./workflow-monitor/workflow-handler";
 import {
   computeBoundaryToPrompt,
   type Phase,
@@ -617,8 +622,8 @@ export default function (pi: ExtensionAPI) {
         if (result.tddViolationCount > 0) {
           const names = result.agentNames.join(", ") || "unknown";
           injected.push(
-            `⚠️ Subagent \"${names}\" had ${result.tddViolationCount} TDD violation${result.tddViolationCount > 1 ? "s" : ""}. ` +
-            "Subagents should follow TDD: write failing test → implement → verify.",
+            `⚠️ Subagent "${names}" had ${result.tddViolationCount} TDD violation${result.tddViolationCount > 1 ? "s" : ""}. ` +
+              "Subagents should follow TDD: write failing test → implement → verify.",
           );
         }
 
@@ -627,8 +632,8 @@ export default function (pi: ExtensionAPI) {
           const names = result.agentNames.join(", ") || "unknown";
           const errorMsg = details.result ?? "unknown error";
           injected.push(
-            `❌ Subagent \"${names}\" failed: ${errorMsg}. ` +
-            "As orchestrator, re-dispatch with specific fix instructions or report to user.",
+            `❌ Subagent "${names}" failed: ${errorMsg}. ` +
+              "As orchestrator, re-dispatch with specific fix instructions or report to user.",
           );
         }
 
@@ -640,9 +645,11 @@ export default function (pi: ExtensionAPI) {
             const trackerState = ctx.sessionManager.getBranch();
             for (const entry of trackerState) {
               if (entry.type !== "message") continue;
-              const msg = (entry as any).message;
+              const msg = (entry as { message?: { role?: string; toolName?: string; details?: unknown } }).message;
               if (msg?.role !== "toolResult" || msg?.toolName !== "plan_tracker") continue;
-              const trackerDetails = msg.details as { action?: string; tasks?: Array<{ name: string; status: string }> } | undefined;
+              const trackerDetails = msg.details as
+                | { action?: string; tasks?: Array<{ name: string; status: string }> }
+                | undefined;
               if (trackerDetails?.tasks) {
                 const firstPending = trackerDetails.tasks.findIndex((t) => t.status === "pending");
                 if (firstPending >= 0) {
