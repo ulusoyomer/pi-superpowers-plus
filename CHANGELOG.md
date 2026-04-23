@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.6.0] — 2026-04-23
+
+### Summary
+
+New `coding-discipline` skill inspired by [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls. Package metadata updated to reflect the fork's own identity.
+
+### Added
+
+- **`coding-discipline` skill** (`skills/coding-discipline/SKILL.md`) — Two principles addressing common LLM coding mistakes not covered by existing skills:
+  - **Simplicity First** — Prevents over-abstraction, speculative features, and bloated code. Includes over-abstraction and speculative feature detection checklists.
+  - **Surgical Changes** — Prevents drive-by refactoring, unnecessary diffs, and touching code outside the scope of the request. Includes diff hygiene checklist.
+  - Cross-references to related skills (`brainstorming`, `test-driven-development`, `verification-before-completion`, `requesting-code-review`).
+  - Red flags and rationalization tables consistent with existing skill format.
+
+### Changed
+
+- **`package.json`** — Replaced placeholder `"string"` values with real project metadata (name, version, description, author, repository URL, keywords). Added `coding-discipline` to `pi.skills` array.
+- **`README.md`** — Updated skill count (12 → 13), added `coding-discipline` to workflow table, supporting skills table, architecture tree, size comparison table, and "How Skills and Extensions Work Together" table.
+- **`LICENSE`** — Added fork author copyright.
+- **Package version** bumped to `0.6.0`.
+
+---
+
 ## [0.5.0] — 2026-04-19
 
 ### Summary
